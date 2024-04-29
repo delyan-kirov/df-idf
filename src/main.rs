@@ -3,23 +3,24 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 
-#[derive(Debug)]
+type TermHash = HashMap<String, usize>;
+
+/// The sql table will hold these values
 struct Document {
     path: PathBuf,
-    tf: HashMap<String, f64>,
-}
-
-impl Document {
-    fn new(path: PathBuf, tf: HashMap<String, f64>) -> Self {
-        Document { path, tf }
-    }
+    df: TermHash,
 }
 
 fn process_file(path: &Path) -> Option<Document> {
-    let mut term_frequencies: HashMap<String, f64> = HashMap::new();
+    let mut term_frequencies: TermHash = HashMap::new();
     let file_content = fs::read_to_string(path).ok()?;
-
-    Some(Document::new(path.to_path_buf(), term_frequencies))
+    file_content.split_whitespace().for_each(|term| {
+        term_frequencies.entry(term.to_string()).or_insert(0);
+    });
+    Some(Document {
+        path: path.to_path_buf(),
+        df: term_frequencies,
+    })
 }
 
 fn main() {
@@ -38,6 +39,7 @@ fn main() {
     let documents: Vec<Document> = files
         .par_iter()
         .filter_map(|path| process_file(path))
+        // TODO: Add to data sqlite
         .collect();
     println!("{:?}", 1);
 }
