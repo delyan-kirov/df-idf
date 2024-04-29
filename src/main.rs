@@ -6,6 +6,7 @@ use std::path::{Path, PathBuf};
 type TermHash = HashMap<String, usize>;
 
 /// The sql table will hold these values
+#[derive(Debug)]
 struct Document {
     path: PathBuf,
     df: TermHash,
@@ -15,7 +16,10 @@ fn process_file(path: &Path) -> Option<Document> {
     let mut term_frequencies: TermHash = HashMap::new();
     let file_content = fs::read_to_string(path).ok()?;
     file_content.split_whitespace().for_each(|term| {
-        term_frequencies.entry(term.to_string()).or_insert(0);
+        *term_frequencies
+            // TODO: lemify
+            .entry(term.to_string())
+            .or_insert_with(|| 0) += 1;
     });
     Some(Document {
         path: path.to_path_buf(),
@@ -31,17 +35,19 @@ fn main() {
             if let Ok(entry) = entry {
                 let path = entry.path();
                 if path.is_file() {
+                    println!("INFO: file: {:?} was added", &path);
                     files.push(path.clone());
                 }
             }
         }
     }
-    let documents: Vec<Document> = files
+    let _ = files
         .par_iter()
         .filter_map(|path| process_file(path))
         // TODO: Add to data sqlite
-        .collect();
-    println!("{:?}", 1);
+        .for_each(|doc| {
+            dbg!(&doc.df);
+        });
 }
 
 /*
