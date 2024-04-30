@@ -1,4 +1,6 @@
 use rayon::prelude::*;
+use rusqlite::types::Value;
+use rusqlite::{params, Connection, Result, ToSql};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -10,6 +12,48 @@ type TermHash = HashMap<String, usize>;
 struct Document {
     path: PathBuf,
     df: TermHash,
+}
+
+fn create_document_table(document: &Document) -> Result<()> {
+    let path = Path::new("./data/data.db");
+    let conn = Connection::open(path)?;
+    // Construct the table name from the document path
+    let table_name = document
+        .path
+        .to_str()
+        .expect("Path name should be valid utf8")
+        // TODO: escape codes in sqlite text
+        .replace("/", "_in_")
+        .replace(".", "_dot_"); // Replace '/' and '.' with '_' to make a valid table name
+
+    // Create the table if it doesn't exist
+    conn.execute(
+        &format!(
+            "CREATE TABLE IF NOT EXISTS {} (
+                term TEXT PRIMARY KEY,
+                frequency INTEGER NOT NULL
+            )",
+            table_name
+        ),
+        [],
+    )?;
+    // Populating the database with values from the HashMap
+    for (term, frequency) in &document.df {
+        conn.execute(
+            &format!(
+                "INSERT INTO {} 
+                    (term, frequency) VALUES 
+                    (?1  , ?2)",
+                table_name
+            ),
+            params![term, frequency],
+        )?;
+    }
+    return Ok(());
+}
+
+fn _add_terms_to_sqlite(_doc: &Document) -> Result<()> {
+    todo!();
 }
 
 fn process_file(path: &Path) -> Option<Document> {
@@ -44,9 +88,15 @@ fn main() {
     let _ = files
         .par_iter()
         .filter_map(|path| process_file(path))
-        // TODO: Add to data sqlite
         .for_each(|doc| {
-            dbg!(&doc.df);
+            match create_document_table(&doc) {
+                Ok(_) => {
+                    println!("INFO: Successfully indexed document {:?}", &doc.path);
+                }
+                Err(e) => {
+                    println!("ERROR: {}", e);
+                }
+            };
         });
 }
 
