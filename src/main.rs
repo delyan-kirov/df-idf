@@ -1,9 +1,9 @@
 use rayon::prelude::*;
-use rusqlite::types::Value;
-use rusqlite::{params, Connection, Result, ToSql};
+use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::{Arc, Mutex};
 
 type TermHash = HashMap<String, usize>;
 
@@ -14,17 +14,18 @@ struct Document {
     df: TermHash,
 }
 
+const DATABASE_PATH: &str = "./data/data.db";
+
 fn create_document_table(document: &Document) -> Result<()> {
-    let path = Path::new("./data/data.db");
-    let conn = Connection::open(path)?;
+    let conn = Connection::open(DATABASE_PATH)?;
     // Construct the table name from the document path
     let table_name = document
         .path
         .to_str()
         .expect("Path name should be valid utf8")
-        // TODO: escape codes in sqlite text
-        .replace("/", "_in_")
-        .replace(".", "_dot_"); // Replace '/' and '.' with '_' to make a valid table name
+        // Escape codes in sqlite table names
+        .replace("/", "_IN_")
+        .replace(".", "_DOT_");
 
     // Create the table if it doesn't exist
     conn.execute(
@@ -41,7 +42,7 @@ fn create_document_table(document: &Document) -> Result<()> {
     for (term, frequency) in &document.df {
         conn.execute(
             &format!(
-                "INSERT INTO {} 
+                "INSERT OR REPLACE INTO {} 
                     (term, frequency) VALUES 
                     (?1  , ?2)",
                 table_name
@@ -52,8 +53,18 @@ fn create_document_table(document: &Document) -> Result<()> {
     return Ok(());
 }
 
-fn _add_terms_to_sqlite(_doc: &Document) -> Result<()> {
-    todo!();
+fn add_terms_to_sqlite(terms: &TermHash) -> Result<()> {
+    // Create db connection
+    let conn = Connection::open(DATABASE_PATH)?;
+    for (term, frequency) in terms {
+        conn.execute(
+            "INSERT OR REPLACE INTO terms 
+                    (term, frequency) VALUES 
+                    (?1  , ?2)",
+            params![term, frequency],
+        )?;
+    }
+    Ok(())
 }
 
 fn process_file(path: &Path) -> Option<Document> {
@@ -73,6 +84,7 @@ fn process_file(path: &Path) -> Option<Document> {
 
 fn main() {
     let dir_path = Path::new("./content");
+    let total_terms: Arc<Mutex<TermHash>> = Arc::new(Mutex::new(HashMap::new()));
     let mut files: Vec<PathBuf> = Vec::new();
     if let Ok(entries) = fs::read_dir(dir_path) {
         for entry in entries {
@@ -85,10 +97,28 @@ fn main() {
             }
         }
     }
+    // Create db connection
+    let conn = Connection::open(DATABASE_PATH)
+        .expect("ERROR: could not open a connection to the database");
+    // Create the table if it doesn't exist
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS terms (
+                term TEXT PRIMARY KEY,
+                frequency INTEGER NOT NULL
+            )",
+        [],
+    )
+    .expect("ERROR: could not create the table for terms");
+
     let _ = files
-        .par_iter()
+        .iter()
         .filter_map(|path| process_file(path))
         .for_each(|doc| {
+            let mut total_terms = total_terms.lock().expect("ERROR: Could not lock mutex");
+            for (term, frequency) in &doc.df {
+                *total_terms.entry(term.to_string()).or_insert(0) += frequency;
+            }
+            drop(total_terms); // Release the lock
             match create_document_table(&doc) {
                 Ok(_) => {
                     println!("INFO: Successfully indexed document {:?}", &doc.path);
@@ -98,12 +128,14 @@ fn main() {
                 }
             };
         });
+    if let Err(e) = add_terms_to_sqlite(&total_terms.lock().expect("ERROR: could not lock mutex")) {
+        println!("ERROR: {}", e);
+    };
 }
 
 /*
  *
- * Extract the content of the files
- * Per file, create a sql table - which is a document type
- * Extract the lemmas of all files in their own sql table of lemma type
+ * TODO: Given a query of terms, make the relavant sql query
+ * TODO: Try posgress
  *
  * */
