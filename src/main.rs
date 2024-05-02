@@ -1,10 +1,12 @@
 use rayon::prelude::*;
+use regex::Regex;
 use rusqlite::{params, Connection, Result};
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
+use walkdir::WalkDir;
 
 type TermHash = HashMap<String, usize>;
 
@@ -55,13 +57,22 @@ fn create_document_table(document: &Document) -> Result<()> {
         [],
     )?;
     // Populating the database with values from the HashMap
-    let mut sql_insert = "".to_string();
-    for (term, frequency) in &document.df {
+    let mut sql_insert = format!(
+        "INSERT OR REPLACE INTO {} (term, frequency) VALUES\n",
+        table_name,
+    )
+    .to_string();
+    for (index, (term, frequency)) in document.df.iter().enumerate() {
+        let comma = if index < document.df.len() - 1 {
+            ","
+        } else {
+            ""
+        };
         sql_insert.push_str(&format!(
-            "INSERT OR REPLACE INTO {} 
-                    (term, frequency) VALUES 
-                    ('{}'  , {});\n",
-            &table_name, &term, &frequency
+            " ('{}', {}){}\n",
+            term.replace("'", "").replace("\"", ""),
+            frequency,
+            comma
         ));
     }
     conn.execute(&sql_insert, params![])?;
@@ -80,16 +91,17 @@ fn add_terms_to_sqlite(terms: &TermHash) -> Result<()> {
         [],
     )
     .expect("ERROR: could not create the table for terms");
-    // Create db connection
-    let mut sql_insert = "".to_string();
-    for (term, frequency) in terms {
-        sql_insert.push_str(&format!(
-            "INSERT OR REPLACE INTO terms 
-                    (term, frequency) VALUES 
-                    ('{}'  , {});\n",
-            &term, &frequency
-        ));
+
+    let mut sql_insert = "INSERT OR REPLACE INTO terms (term, frequency) VALUES\n".to_string();
+    for (index, (term, frequency)) in terms.iter().enumerate() {
+        let comma = if index < terms.len() - 1 { "," } else { "" };
+        let parsed_term = {
+            let re = Regex::new(r"[^a-zA-Z]+").unwrap();
+            re.replace_all(term, "").to_string()
+        };
+        sql_insert.push_str(&format!(" ('{}', {}){}\n", parsed_term, frequency, comma));
     }
+    // insert data
     conn.execute(&sql_insert, params![])?;
     Ok(())
 }
@@ -208,20 +220,17 @@ fn query_many_terms(terms: &Vec<String>) -> Result<Vec<String>> {
     Ok(sorted_terms)
 }
 
-fn main() {
-    let dir_path = Path::new("./content");
+fn index_files(dir_path: String) {
+    let dir_path = Path::new(&dir_path);
 
     let total_terms: Arc<Mutex<TermHash>> = Arc::new(Mutex::new(HashMap::new()));
     let mut files: Vec<PathBuf> = Vec::new();
-    if let Ok(entries) = fs::read_dir(dir_path) {
-        for entry in entries {
-            if let Ok(entry) = entry {
-                let path = entry.path();
-                if path.is_file() {
-                    // println!("INFO: file: {:?} was added", &path);
-                    files.push(path.clone());
-                }
-            }
+
+    for entry in WalkDir::new(dir_path).into_iter().filter_map(|e| e.ok()) {
+        let path = entry.path();
+        if path.is_file() {
+            println!("INFO: file: {:?} was added", &path);
+            files.push(path.to_path_buf());
         }
     }
 
@@ -270,7 +279,11 @@ fn main() {
             );
         }
     }
-    match query_term(&"who".to_string()) {
+}
+
+fn main() {
+    index_files("./content".to_string());
+    match query_term(&"hello".to_string()) {
         Err(e) => println!("ERROR: {}", e),
         Ok(results) => {
             println!("INFO: number of results: {}", results.iter().count());
@@ -285,7 +298,8 @@ fn main() {
             });
         }
     }
-    query_many_terms(&vec!["hello".to_string(), "hello".to_string()])
+
+    query_many_terms(&vec!["advent".to_string(), "news".to_string()])
         .unwrap_or(vec![])
         .iter()
         .for_each(|query| {
@@ -297,8 +311,3 @@ fn main() {
             )
         })
 }
-
-/*
- *  TODO: Get some sample data
- *  TODO: Separate indexing from querying
- * */

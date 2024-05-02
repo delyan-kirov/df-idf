@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 rayon = "1.5.1"
 rusqlite = "0.31.0"
+walkdir = "2"
+regex = "1.5"
