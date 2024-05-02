@@ -1,6 +1,6 @@
 use rayon::prelude::*;
 use rusqlite::{params, Connection, Result};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
@@ -109,41 +109,103 @@ fn process_file(path: &Path) -> Option<Document> {
     })
 }
 
-fn query_term(term: &String) -> Result<String> {
+fn query_term(term: &String) -> Result<Vec<(String, f64)>> {
     let conn = Connection::open(DATABASE_PATH)?;
     #[derive(Debug, Clone)]
     struct RowData {
         name: String,
         size: usize,
     }
-    let mut doc_names = Vec::new();
-    let mut doc_sizes = Vec::new();
-    conn.prepare(&format!(
-        "SELECT name, size FROM documents WHERE name = {}",
-        &term
-    ))?
-    .query_map(&[term], |row| {
-        let name = row.get(0)?;
-        let size = row.get(1)?;
-        Ok(RowData { name, size })
-    })?
-    .into_iter()
-    .for_each(|row| {
-        let curr_row = row.expect("ERROR: could not unwrap doc_names");
-        doc_names.push(curr_row.name);
-        doc_sizes.push(curr_row.size);
+    let mut docs = HashMap::<String, usize>::new();
+    let mut result: Vec<(String, f64)> = Vec::new();
+    conn.prepare("SELECT name, size FROM documents")?
+        .query_map([], |row| {
+            let name = row.get(0)?;
+            let size = row.get(1)?;
+            Ok(RowData { name, size })
+        })?
+        .into_iter()
+        .for_each(|row| {
+            let curr_row = row.expect("ERROR: could not unwrap doc_names");
+            docs.insert(curr_row.name.clone(), curr_row.size);
+        });
+    let query: String = docs
+        .keys()
+        .map(|name| {
+            format!(
+                "SELECT frequency, '{}' AS {} FROM {} WHERE term = '{}'\n",
+                name, name, name, term
+            )
+        })
+        .collect::<Vec<String>>()
+        .join("UNION ALL\n")
+        + "\nORDER BY frequency DESC";
+
+    conn.prepare(&query)?
+        .query_map([], |row| {
+            let frequency: usize = row.get(0)?;
+            let name: String = row.get(1)?;
+            Ok((frequency, name))
+        })?
+        .for_each(|data| match data {
+            Ok((freq, name)) => {
+                if let Some(&total_freq_for_term) = docs.get(&name) {
+                    result.push((name.clone(), freq as f64 / total_freq_for_term as f64));
+                }
+            }
+            Err(e) => {
+                println!("ERROR: {}", e);
+            }
+        });
+    result.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(result)
+}
+
+fn query_many_terms(terms: &Vec<String>) -> Result<Vec<String>> {
+    let mut results: Vec<Vec<(String, f64)>> = Vec::new();
+    terms.iter().for_each(|term| {
+        if let Ok(query) = query_term(term) {
+            results.push(query)
+        }
     });
-    let query: String = doc_names.iter().fold("".to_string(), |name_1, name_2| {
-        format!(
-            "SELECT frequency FROM {} WHERE term = {}
-             UNION
-             SELECT frequency FROM {} WHERE term = {}",
-            &name_1, &term, &name_2, &term
-        )
+    // Find the set intersection of term names in the results
+    let mut intersection: Option<HashSet<String>> = None;
+    for query in &results {
+        let term_set: HashSet<String> = query.iter().map(|(term, _)| term.clone()).collect();
+        intersection = match intersection {
+            Some(inter) => Some(inter.intersection(&term_set).cloned().collect()),
+            None => Some(term_set),
+        };
+    }
+    // Calculate measures for each term in the intersection
+    let mut measures: Vec<(String, f64)> = Vec::new();
+    match intersection {
+        Some(terms) => {
+            for term in terms {
+                let measure = results.iter().fold(1.0, |acc, result| {
+                    let term_freq = result
+                        .iter()
+                        .find(|(t, _)| *t == term)
+                        .map(|(_, freq)| *freq)
+                        .unwrap_or(0.0);
+                    acc * term_freq
+                });
+                measures.push((term, measure));
+            }
+        }
+        None => measures = results.concat(),
+    }
+
+    // Sort the terms by measure in descending order
+    measures.sort_by(|(_, measure1), (_, measure2)| {
+        measure2
+            .partial_cmp(measure1)
+            .unwrap_or(std::cmp::Ordering::Equal)
     });
-    dbg!(&query);
-    Ok(query)
-    // Ok("".to_string())
+
+    // Return the sorted terms
+    let sorted_terms: Vec<String> = measures.iter().map(|(term, _)| term.clone()).collect();
+    Ok(sorted_terms)
 }
 
 fn main() {
@@ -208,11 +270,35 @@ fn main() {
             );
         }
     }
-    println!("{:?}", query_term(&"of".to_string()));
+    match query_term(&"who".to_string()) {
+        Err(e) => println!("ERROR: {}", e),
+        Ok(results) => {
+            println!("INFO: number of results: {}", results.iter().count());
+            println!("RESULT: ");
+            results.iter().enumerate().for_each(|(i, (res, _))| {
+                println!(
+                    "   {}. {}",
+                    i + 1,
+                    res.replace("_DOT__IN_content_IN_", "")
+                        .replace("_DOT_txt", "")
+                );
+            });
+        }
+    }
+    query_many_terms(&vec!["hello".to_string(), "hello".to_string()])
+        .unwrap_or(vec![])
+        .iter()
+        .for_each(|query| {
+            println!(
+                "{}",
+                query
+                    .replace("_DOT__IN_content_IN_", "")
+                    .replace("_DOT_txt", "")
+            )
+        })
 }
 
 /*
- *
- * TODO: Given a query of terms, make the relavant sql query
- *
+ *  TODO: Get some sample data
+ *  TODO: Separate indexing from querying
  * */
