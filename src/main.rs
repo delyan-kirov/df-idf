@@ -2,10 +2,11 @@ use rayon::prelude::*;
 use regex::Regex;
 use rusqlite::{params, Connection, Result};
 use std::collections::{HashMap, HashSet};
-use std::fs;
+use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
+use std::{fs, io};
 use walkdir::WalkDir;
 
 type TermHash = HashMap<String, usize>;
@@ -121,6 +122,7 @@ fn process_file(path: &Path) -> Option<Document> {
     })
 }
 
+/// Compute tf-idf for a single term
 fn query_term(term: &String) -> Result<Vec<(String, f64)>> {
     let conn = Connection::open(DATABASE_PATH)?;
     #[derive(Debug, Clone)]
@@ -128,8 +130,11 @@ fn query_term(term: &String) -> Result<Vec<(String, f64)>> {
         name: String,
         size: usize,
     }
-    let mut docs = HashMap::<String, usize>::new();
-    let mut result: Vec<(String, f64)> = Vec::new();
+    let mut docs = HashMap::<String, usize>::new(); // holds all documents and their size
+    let mut term_frequency: Vec<(String, f64)> = Vec::new(); // holds the term and updates its
+                                                             // frequency
+
+    // extract documents
     conn.prepare("SELECT name, size FROM documents")?
         .query_map([], |row| {
             let name = row.get(0)?;
@@ -141,6 +146,8 @@ fn query_term(term: &String) -> Result<Vec<(String, f64)>> {
             let curr_row = row.expect("ERROR: could not unwrap doc_names");
             docs.insert(curr_row.name.clone(), curr_row.size);
         });
+
+    // extract term
     let query: String = docs
         .keys()
         .map(|name| {
@@ -162,17 +169,26 @@ fn query_term(term: &String) -> Result<Vec<(String, f64)>> {
         .for_each(|data| match data {
             Ok((freq, name)) => {
                 if let Some(&total_freq_for_term) = docs.get(&name) {
-                    result.push((name.clone(), freq as f64 / total_freq_for_term as f64));
+                    term_frequency.push((name.clone(), freq as f64 / total_freq_for_term as f64));
                 }
             }
             Err(e) => {
                 println!("ERROR: {}", e);
             }
         });
-    result.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
-    Ok(result)
+    // Computer idf
+    let total_term_count = term_frequency.iter().count() as f64;
+    let total_doc_count = docs.iter().count() as f64;
+    let idf_constant = (total_term_count / total_doc_count).log(std::f64::consts::E);
+    // Map idf to the computed df in place
+    for (_, freq) in term_frequency.iter_mut() {
+        *freq *= idf_constant
+    }
+    term_frequency.sort_by(|(_, a), (_, b)| b.partial_cmp(a).unwrap_or(std::cmp::Ordering::Equal));
+    Ok(term_frequency)
 }
 
+/// Computer the tf-idf for a vector of terms
 fn query_many_terms(terms: &Vec<String>) -> Result<Vec<String>> {
     let mut results: Vec<Vec<(String, f64)>> = Vec::new();
     terms.iter().for_each(|term| {
@@ -220,12 +236,14 @@ fn query_many_terms(terms: &Vec<String>) -> Result<Vec<String>> {
     Ok(sorted_terms)
 }
 
+/// Generate sqlite tables for the data in the provided directory
 fn index_files(dir_path: String) {
     let dir_path = Path::new(&dir_path);
 
     let total_terms: Arc<Mutex<TermHash>> = Arc::new(Mutex::new(HashMap::new()));
     let mut files: Vec<PathBuf> = Vec::new();
 
+    // walk directory recursively
     for entry in WalkDir::new(dir_path).into_iter().filter_map(|e| e.ok()) {
         let path = entry.path();
         if path.is_file() {
@@ -281,14 +299,30 @@ fn index_files(dir_path: String) {
     }
 }
 
-fn main() {
-    index_files("./content".to_string());
-    match query_term(&"hello".to_string()) {
-        Err(e) => println!("ERROR: {}", e),
+fn find_documents_from_user_query() {
+    let mut input = String::new();
+    print!("SEARCH: ");
+    std::io::stdout()
+        .flush()
+        .expect("ERROR: could not flush stdout");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("ERROR: failed to read line");
+
+    let search: Vec<String> = input
+        .trim()
+        .to_string()
+        .split_whitespace()
+        .map(|s| s.to_string())
+        .collect();
+
+    let query_result = query_many_terms(&search);
+    match query_result {
+        Err(e) => eprintln!("ERROR: {e}"),
         Ok(results) => {
             println!("INFO: number of results: {}", results.iter().count());
             println!("RESULT: ");
-            results.iter().enumerate().for_each(|(i, (res, _))| {
+            results.iter().enumerate().for_each(|(i, res)| {
                 println!(
                     "   {}. {}",
                     i + 1,
@@ -298,16 +332,16 @@ fn main() {
             });
         }
     }
+}
 
-    query_many_terms(&vec!["advent".to_string(), "news".to_string()])
-        .unwrap_or(vec![])
-        .iter()
-        .for_each(|query| {
-            println!(
-                "{}",
-                query
-                    .replace("_DOT__IN_content_IN_", "")
-                    .replace("_DOT_txt", "")
-            )
-        })
+const SHOULD_INDEX: bool = false;
+const SHOULD_QUERY: bool = true;
+
+fn main() {
+    if SHOULD_INDEX {
+        index_files("./content".to_string())
+    };
+    if SHOULD_QUERY {
+        find_documents_from_user_query();
+    }
 }
