@@ -20,6 +20,14 @@ app.get("/", (_req: Request, res: Response) => {
   }
 });
 
+app.get("/query", (req, res) => {
+  const query = req.query.query; // Retrieve the value of the 'query' parameter
+  // Process the query here
+  console.log("Received query:", query);
+  // Respond with data or perform other actions
+  res.send(`Received query: ${query}`);
+});
+
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
 });

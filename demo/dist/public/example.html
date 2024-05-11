@@ -7,5 +7,31 @@
   </head>
   <body>
     <h1>Welcome to the Example</h1>
+    <h2>Query Form</h2>
+    <form id="queryForm" action="/query" method="GET">
+      <label for="query">Query:</label><br />
+      <input type="text" id="query" name="query" /><br /><br />
+      <button type="submit">Submit</button>
+    </form>
+    <div id="response"></div>
+
+    <script>
+      document
+        .getElementById("queryForm")
+        .addEventListener("submit", function (event) {
+          event.preventDefault(); // Prevent default form submission
+          const query = document.getElementById("query").value; // Get the value of the query input
+          fetch(`/query?query=${query}`)
+            .then((response) => response.text())
+            .then((data) => {
+              // Update the response div with the received data
+              document.getElementById("response").innerText = data;
+            })
+            .catch((error) => {
+              console.error("Error:", error);
+              // Handle errors if any
+            });
+        });
+    </script>
   </body>
 </html>
