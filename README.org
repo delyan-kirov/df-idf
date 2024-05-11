@@ -1,4 +1,4 @@
-* [[tf-idf][https://en.wikipedia.org/wiki/Tf%E2%80%93idf]]
+* [[https://en.wikipedia.org/wiki/Tf%E2%80%93idf][tf-idf implementation]]
 
 The algorithm tf-idf, or term frequency - inverse document frequency is a common way to measure the relevance of a word in a set of files. 
 Often used by search engines, machine models and other tools to query and sort data.
@@ -10,7 +10,7 @@ The idea is simple, ...
 
 What is Lemmatization? This is the process of...
 
-The current implementation uses [[Snowball][https://snowballstem.org/]], a popular algorithm that produces code for Lemmatization for many languages.
+The current implementation uses [[https://snowballstem.org/][snowball]] a popular algorithm that produces code for Lemmatization for many languages.
 They support Rust, C, C++, C#, Java, Javascrript and more. Prebuild algorithm are available. It's also possible to tweak the algorithm by installing the compiler.
 
 A rust implementation can be found here: [[https://github.com/minhnhdo/rust-stem]]
