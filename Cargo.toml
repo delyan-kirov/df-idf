@@ -10,3 +10,6 @@ rayon = "1.5.1"
 rusqlite = "0.31.0"
 walkdir = "2"
 regex = "1.5"
+
+[dependencies.stem]
+git = "https://github.com/minhnhdo/rust-stem"

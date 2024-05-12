@@ -228,6 +228,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c5e1a9a646d36c3599cd173a41282daf47c44583ad367b8e6837255952e5c67"
 
 [[package]]
+name = "stem"
+version = "0.1.0"
+source = "git+https://github.com/minhnhdo/rust-stem#4dcce905b51681374889aa2b9dd4d58a03a0d60e"
+
+[[package]]
 name = "syn"
 version = "2.0.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -245,6 +250,7 @@ dependencies = [
  "rayon",
  "regex",
  "rusqlite",
+ "stem",
  "walkdir",
 ]
 

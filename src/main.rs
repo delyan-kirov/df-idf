@@ -6,8 +6,10 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::AtomicUsize;
 use std::sync::{Arc, Mutex};
-use std::{fs, io};
+use std::{env, fs, io};
 use walkdir::WalkDir;
+
+const DATABASE_PATH: &str = "./data/data.db";
 
 type TermHash = HashMap<String, usize>;
 
@@ -18,7 +20,16 @@ struct Document {
     df: TermHash,
 }
 
-const DATABASE_PATH: &str = "./data/data.db";
+fn lemmatize(word: &String) -> String {
+    let lemma = stem::get(word);
+    match lemma {
+        Ok(word_lemma) => return word_lemma,
+        Err(e) => {
+            println!("ERROR: {}", e);
+            return String::new();
+        }
+    }
+}
 
 fn create_document_table(document: &Document) -> Result<()> {
     let conn = Connection::open(DATABASE_PATH)?;
@@ -112,8 +123,7 @@ fn process_file(path: &Path) -> Option<Document> {
     let file_content = fs::read_to_string(path).ok()?;
     file_content.split_whitespace().for_each(|term| {
         *term_frequencies
-            // TODO: lemify
-            .entry(term.to_string())
+            .entry(lemmatize(&term.to_string()))
             .or_insert_with(|| 0) += 1;
     });
     Some(Document {
@@ -124,6 +134,7 @@ fn process_file(path: &Path) -> Option<Document> {
 
 /// Compute tf-idf for a single term
 fn query_term(term: &String) -> Result<Vec<(String, f64)>> {
+    let term = lemmatize(term);
     let conn = Connection::open(DATABASE_PATH)?;
     #[derive(Debug, Clone)]
     struct RowData {
@@ -334,14 +345,43 @@ fn find_documents_from_user_query() {
     }
 }
 
-const SHOULD_INDEX: bool = false;
-const SHOULD_QUERY: bool = true;
+fn find_documents_from_commandline(query: &Vec<String>) {
+    let query_result = query_many_terms(&query);
+    match query_result {
+        Err(e) => eprintln!("ERROR: {e}"),
+        Ok(results) => {
+            println!("INFO: number of results: {}", results.iter().count());
+            println!("RESULT: ");
+            results.iter().enumerate().for_each(|(i, res)| {
+                println!(
+                    "   {}. {}",
+                    i + 1,
+                    res.replace("_DOT__IN_content_IN_", "")
+                        .replace("_DOT_txt", "")
+                );
+            });
+        }
+    }
+}
 
 fn main() {
-    if SHOULD_INDEX {
-        index_files("./content".to_string())
+    let query: Vec<String>;
+    let mut args = env::args().into_iter();
+    match args.nth(1) {
+        Some(a) if a == "-q" => {
+            query = args.collect();
+            find_documents_from_commandline(&query)
+        } // collect query
+        Some(a) if a == "-i" => match args.next() {
+            Some(dir_path) => {
+                index_files(dir_path);
+                return ();
+            }
+            None => {
+                println!("ERROR: directory not provided");
+                return ();
+            }
+        }, // index directory
+        _ => find_documents_from_user_query(),
     };
-    if SHOULD_QUERY {
-        find_documents_from_user_query();
-    }
 }
