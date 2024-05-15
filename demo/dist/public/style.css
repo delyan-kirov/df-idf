@@ -1,0 +1,54 @@
+body {
+  font-family: Arial, sans-serif;
+  font-size: 30px;
+  margin: 0;
+  padding: 0;
+  background-color: #000000; /* Black background */
+}
+
+h1 {
+  color: #00ffff; /* Neon blue */
+  text-align: center;
+}
+
+form {
+  width: 50%;
+  margin: 0 auto;
+  text-align: center;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  color: #39ff14; /* Neon green */
+}
+
+input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 10px;
+  box-sizing: border-box;
+  background-color: #000000; /* Black background */
+  border: 2px solid #00ffff; /* Neon blue border */
+  color: #ffffff; /* White text */
+}
+
+button {
+  padding: 10px 20px;
+  background-color: #00ffff; /* Neon green */
+  color: Black; /* White text */
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #32cd32; /* Darker green on hover */
+}
+
+#response {
+  margin-top: 20px;
+  padding: 10px;
+  border: 1px solid #00ffff; /* Neon blue border */
+  background-color: #000000; /* Black background */
+  color: #00ffff; /* Neon blue text */
+}

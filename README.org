@@ -18,3 +18,9 @@ A rust implementation can be found here: [[https://github.com/minhnhdo/rust-stem
 * Data 
 
 The current implementation uses sqlite3 to index and query data. After running some tests, I do not think this was the correct tool. The program needs to create many large tables and query many tables. This is quite difficult to do well in sqlite3, data will often not be stored if the insert query is too large, or entries will be skipped. A better approach would be to use postgres or a no sql database. 
+
+* TODO 
+
+- [ ] Update readme
+- [ ] Add blog entry 
+- [ ] Create the build script
