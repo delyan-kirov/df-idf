@@ -1,13 +1,18 @@
 body {
-  font-family: Arial, sans-serif;
+  font-family: Georgia, Times, serif;
   font-size: 30px;
   margin: 0;
   padding: 0;
-  background-color: #000000; /* Black background */
+  background-color: rgb(40, 20, 30);
+}
+
+.input-container {
+  display: flex;
+  align-items: center;
 }
 
 h1 {
-  color: #00ffff; /* Neon blue */
+  color: white;
   text-align: center;
 }
 
@@ -19,36 +24,53 @@ form {
 
 label {
   display: block;
-  margin-bottom: 5px;
-  color: #39ff14; /* Neon green */
+  font-size: 120%;
+  margin-bottom: 1px;
+  color: white;
 }
 
 input[type="text"] {
+  font-size: 20px;
   width: 100%;
-  padding: 10px;
-  margin-bottom: 10px;
+  padding: 2%;
+  margin: 2%;
+  border: none;
+  border-radius: 20px;
   box-sizing: border-box;
-  background-color: #000000; /* Black background */
-  border: 2px solid #00ffff; /* Neon blue border */
-  color: #ffffff; /* White text */
+  background-color: black;
+  color: white;
 }
 
 button {
-  padding: 10px 20px;
-  background-color: #00ffff; /* Neon green */
-  color: Black; /* White text */
-  border-radius: 10px;
+  padding: 2%;
+  font-size: 20px;
+  background-color: black;
+  color: white;
+  border: none;
+  border-radius: 20px;
   cursor: pointer;
 }
 
 button:hover {
-  background-color: #32cd32; /* Darker green on hover */
+  background-color: white;
+  color: black;
 }
 
 #response {
-  margin-top: 20px;
-  padding: 10px;
-  border: 1px solid #00ffff; /* Neon blue border */
-  background-color: #000000; /* Black background */
-  color: #00ffff; /* Neon blue text */
+  font-size: 30px;
+  padding: 2%;
+  margin: 2%;
+  border: none;
+  border-radius: 20px;
+  box-sizing: border-box;
+  background-color: black;
+  color: white;
+  opacity: 0; /* Start hidden */
+  transition:
+    max-height 0.5s ease-out,
+    padding 0.5s ease-out; /* Smooth transition */
+}
+
+#response.visible {
+  opacity: 1; /* Fade in */
 }

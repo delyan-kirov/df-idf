@@ -9,7 +9,7 @@ const path_1 = __importDefault(require("path"));
 const app = (0, express_1.default)();
 const PORT = 3000;
 // Serve static files from the 'public' folder
-app.use(express_1.default.static(path_1.default.join(__dirname, "public")));
+app.use(express_1.default.static(path_1.default.join(__dirname, "../dist/public")));
 app.get("/", (_req, res) => {
     res.sendFile(path_1.default.join(__dirname, "../dist/public", "example.html"));
 });
