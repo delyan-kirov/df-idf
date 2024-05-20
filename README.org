@@ -1,26 +1,79 @@
-* [[https://en.wikipedia.org/wiki/Tf%E2%80%93idf][tf-idf implementation]]
+* TF-IDF
 
-The algorithm tf-idf, or term frequency - inverse document frequency is a common way to measure the relevance of a word in a set of files. 
-Often used by search engines, machine models and other tools to query and sort data.
+The algorithm TF-IDF, or Term Frequency - Inverse Document Frequency, is a common method used to measure the relevance of a word in a set of documents. It is often utilized by search engines, machine learning models, and other tools to query and sort data.
 
-The idea is simple, ...
+The idea is simple: we index a set of documents (document space) and record how often a term is encountered in that space and how often the term is encountered per document. Based on these statistics, we calculate the term frequency (TF), which measures how often a term is encountered per file relative to the number of terms in that file, and the inverse document frequency (IDF), which measures the number of documents relative to how often a term is encountered in them.
 
+The rationale behind this is that some terms, for example, 'is' and 'and', are extremely common and should have a 'low weight' when querying a large corpus of files because they do not identify well. On the other hand, words that are encountered in few files should receive a 'higher weight'. When sorting files for querying, we want to show all files that contain these given key terms, while sorting them by relevance, with words that appear in few files but often in a specific file giving a higher order to that specific file.
+
+There are different measures we can try for the TF and IDF, which yield different results. There is, in general, no best approach; different measures have different characteristics. To learn more, see the [[https://en.wikipedia.org/wiki/Tf%E2%80%93idf][TF-IDF Wikipedia page]].
 
 * Lemmatization
 
-What is Lemmatization? This is the process of...
+What is lemmatization? When considering what information to keep for a file, we may be tempted to store words. This is a bad idea since it's inefficient and does not yield good results when querying. We probably do not want to consider 'to work' and 'worked' as separate things. Instead, we may consider them the same term so we can index and query the file, but also considering terms only, not words. The process of finding the stem of a word is called stemming. Lemmatization is similar; it tries to find a common lemma for a family of words. For example: "work", "worked", "to work", "working", "worker".
 
-The current implementation uses [[https://snowballstem.org/][snowball]] a popular algorithm that produces code for Lemmatization for many languages.
-They support Rust, C, C++, C#, Java, Javascrript and more. Prebuild algorithm are available. It's also possible to tweak the algorithm by installing the compiler.
+How we perform lemmatization is quite important, and there are many things to consider. For example, should we consider the words 'faux' and 'false' as the same term? It may be tempting to say no; however, it is true that both words share the same stem (they are loans from Latin but taken at different times) and they do have a similar meaning. Similarly, 'work', 'to work', and 'worker' share the same stem but are quite different.
 
-A rust implementation can be found here: [[https://github.com/minhnhdo/rust-stem]]
+The current implementation uses [[https://snowballstem.org/][Snowball]], a popular algorithm that produces code for lemmatization for many languages. They support Rust, C, C++, C#, Java, JavaScript, and more. Prebuilt algorithms are available. It's also possible to tweak the algorithm by installing the compiler.
 
-* Data 
+A Rust implementation can be found here: [[https://github.com/minhnhdo/rust-stem][Rust-Stem]].
 
-The current implementation uses sqlite3 to index and query data. After running some tests, I do not think this was the correct tool. The program needs to create many large tables and query many tables. This is quite difficult to do well in sqlite3, data will often not be stored if the insert query is too large, or entries will be skipped. A better approach would be to use postgres or a no sql database. 
+* Data
 
-* TODO 
+The current implementation uses SQLite3 to index and query data. After running some tests, I do not think this was the correct tool. The program needs to create many large tables and query many tables. This is quite difficult to do well in SQLite3; data will often not be stored if the insert query is too large, or entries will be skipped. A better approach would be to use PostgreSQL or a NoSQL database.
 
-- [ ] Update readme
-- [ ] Add blog entry 
+** Performance
+
+The program can index small files (less than 5k words) and a small data corpus (less than 10k files) in about 20 minutes. It can handle many files, but not large files. The main problem is the database, SQLite, which does not handle large insertions and large databases well. It is quite fast, however.
+
+The indexing does not perform well with PDF files or non-text files in general. It will skip executables, but it is best used in directories with text files only.
+
+* Compile
+
+Run the folling from the root directory. 
+
+#+begin_src bash
+  cargo build --release
+#+end_src
+
+* Running
+
+You must run the program from the project root directory.
+
+*** Run in terminal
+
+#+begin_src bash
+  cargo run
+#+end_src
+
+*** Query terms from terminal
+
+#+begin_src bash
+  cargo run -- q term1 term2 ... term3
+#+end_src
+
+* Demo
+
+For a short demo, run this:
+
+#+begin_src bash
+  cargo run -- -i ./content
+#+end_src
+
+Then switch to the demo folder and run:
+
+#+begin_src bash
+  tsc
+  nodemon --exec ts-node src/server.ts 
+#+end_src
+
+You will need *node* and *nodemon*. You could also do this instead:
+
+#+begin_src bash
+  node ./dist/server.js
+#+end_src
+
+* TODO
+
+- [ ] Add blog entry
 - [ ] Create the build script

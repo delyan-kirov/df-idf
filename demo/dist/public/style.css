@@ -1,7 +1,7 @@
 body {
   font-family: Georgia, Times, serif;
   font-size: 30px;
-  margin: 0;
+  margin: 2%;
   padding: 0;
   background-color: rgb(40, 20, 30);
 }
@@ -32,8 +32,8 @@ label {
 input[type="text"] {
   font-size: 20px;
   width: 100%;
-  padding: 2%;
-  margin: 2%;
+  padding: 20px;
+  margin: 20px;
   border: none;
   border-radius: 20px;
   box-sizing: border-box;
@@ -42,7 +42,7 @@ input[type="text"] {
 }
 
 button {
-  padding: 2%;
+  padding: 20px;
   font-size: 20px;
   background-color: black;
   color: white;
@@ -58,17 +58,15 @@ button:hover {
 
 #response {
   font-size: 30px;
-  padding: 2%;
-  margin: 2%;
+  overflow: scroll;
+  padding: 20px;
+  margin: 20px;
   border: none;
   border-radius: 20px;
   box-sizing: border-box;
   background-color: black;
   color: white;
   opacity: 0; /* Start hidden */
-  transition:
-    max-height 0.5s ease-out,
-    padding 0.5s ease-out; /* Smooth transition */
 }
 
 #response.visible {

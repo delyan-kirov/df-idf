@@ -310,6 +310,14 @@ fn index_files(dir_path: String) {
     }
 }
 
+fn reformat_string_from_query(s: String) -> String {
+    s.replace("_DOT__IN_content_IN_", "")
+        .replace("_DOT_txt", "")
+        .replace("_DOT_org", "")
+        .replace("_IN_", "/")
+        .replace("_DOT_", ".")
+}
+
 fn find_documents_from_user_query() {
     let mut input = String::new();
     print!("SEARCH: ");
@@ -337,8 +345,7 @@ fn find_documents_from_user_query() {
                 println!(
                     "   {}. {}",
                     i + 1,
-                    res.replace("_DOT__IN_content_IN_", "")
-                        .replace("_DOT_txt", "")
+                    reformat_string_from_query(res.to_string())
                 );
             });
         }
@@ -356,8 +363,7 @@ fn find_documents_from_commandline(query: &Vec<String>) {
                 println!(
                     "   {}. {}",
                     i + 1,
-                    res.replace("_DOT__IN_content_IN_", "")
-                        .replace("_DOT_txt", "")
+                    reformat_string_from_query(res.to_string())
                 );
             });
         }

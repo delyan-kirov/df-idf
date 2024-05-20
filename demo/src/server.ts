@@ -35,7 +35,7 @@ app.get("/query", (req, res) => {
     console.log(stdout);
     output = stdout; // Store the output in the variable
     // Respond with data or perform other actions
-    res.send(`Received query: ${output}`);
+    res.send(`${output}`);
   });
   // proc the process
   childProcess.on("exit", () => {
