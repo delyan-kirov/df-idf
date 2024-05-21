@@ -1,6 +1,6 @@
 * TF-IDF
 
-The algorithm TF-IDF, or Term Frequency - Inverse Document Frequency, is a common method used to measure the relevance of a word in a set of documents. It is often utilized by search engines, machine learning models, and other tools to query and sort data.
+The algorithm *TF-IDF*, or Term Frequency - Inverse Document Frequency, is a common method used to measure the relevance of a word in a set of documents. It is often utilized by search engines, machine learning models, and other tools to query and sort data.
 
 The idea is simple: we index a set of documents (document space) and record how often a term is encountered in that space and how often the term is encountered per document. Based on these statistics, we calculate the term frequency (TF), which measures how often a term is encountered per file relative to the number of terms in that file, and the inverse document frequency (IDF), which measures the number of documents relative to how often a term is encountered in them.
 
@@ -10,9 +10,11 @@ There are different measures we can try for the TF and IDF, which yield differen
 
 * Lemmatization
 
-What is lemmatization? When considering what information to keep for a file, we may be tempted to store words. This is a bad idea since it's inefficient and does not yield good results when querying. We probably do not want to consider 'to work' and 'worked' as separate things. Instead, we may consider them the same term so we can index and query the file, but also considering terms only, not words. The process of finding the stem of a word is called stemming. Lemmatization is similar; it tries to find a common lemma for a family of words. For example: "work", "worked", "to work", "working", "worker".
+What is *lemmatization*? When considering what information to keep for a file, we may be tempted to store words. This is a bad idea since it's inefficient and does not yield good results when querying. We probably do not want to consider 'to work' and 'worked' as separate things. Instead, we may consider them the same term so we can index and query the file, but also considering terms only, not words. The process of finding the stem of a word is called stemming. Lemmatization is similar; it tries to find a common lemma for a family of words. For example: "work", "worked", "to work", "working", "worker".
 
 How we perform lemmatization is quite important, and there are many things to consider. For example, should we consider the words 'faux' and 'false' as the same term? It may be tempting to say no; however, it is true that both words share the same stem (they are loans from Latin but taken at different times) and they do have a similar meaning. Similarly, 'work', 'to work', and 'worker' share the same stem but are quite different.
+
+We can use lemmatization to account for common misspellings. Another thing that can be done is to consider the context of how to terms are specified, be it their order or grammatical structure. To keep it simple, this project does not do that. 
 
 The current implementation uses [[https://snowballstem.org/][Snowball]], a popular algorithm that produces code for lemmatization for many languages. They support Rust, C, C++, C#, Java, JavaScript, and more. Prebuilt algorithms are available. It's also possible to tweak the algorithm by installing the compiler.
 
@@ -20,7 +22,7 @@ A Rust implementation can be found here: [[https://github.com/minhnhdo/rust-stem
 
 * Data
 
-The current implementation uses SQLite3 to index and query data. After running some tests, I do not think this was the correct tool. The program needs to create many large tables and query many tables. This is quite difficult to do well in SQLite3; data will often not be stored if the insert query is too large, or entries will be skipped. A better approach would be to use PostgreSQL or a NoSQL database.
+The current implementation uses SQLite3 to index and query data. After running some tests, I do not think this was the correct tool. The program needs to create many large tables and query many tables. This is quite difficult to do well in *SQLite3*; data will often not be stored if the insert query is too large, or entries will be skipped. A better approach would be to use *PostgreSQL* or a *NoSQL* database.
 
 ** Performance
 
@@ -49,12 +51,12 @@ You must run the program from the project root directory.
 *** Query terms from terminal
 
 #+begin_src bash
-  cargo run -- q term1 term2 ... term3
+  cargo run -- -q term1 term2 ... term3
 #+end_src
 
 * Demo
 
-For a short demo, run this:
+For a short demo, run this in the project root directory:
 
 #+begin_src bash
   cargo run -- -i ./content
@@ -67,7 +69,7 @@ Then switch to the demo folder and run:
   nodemon --exec ts-node src/server.ts 
 #+end_src
 
-You will need *node* and *nodemon*. You could also do this instead:
+You will need [[https://nodejs.org/en][node]] and [[https://www.npmjs.com/package/nodemon][nodemon]]. You could also do this if you do not want *nodemon*. 
 
 #+begin_src bash
   node ./dist/server.js
