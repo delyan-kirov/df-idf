@@ -1,0 +1,22 @@
+playing
+
+
+df_idf :> cargo run
+    Finished dev [unoptimized + debuginfo] target(s) in 
+0.02s
+     Running `target/debug/tf_idf`
+SEARCH: git
+INFO: number of results: 1
+RESULT: 
+   1. 102
+df_idf :> 
+-- INSERT --
+
+
+
+
+
+
+
+
+

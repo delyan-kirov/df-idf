@@ -1,0 +1,6 @@
+hello
+world
+new
+pose
+nose
+close
