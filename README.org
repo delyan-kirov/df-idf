@@ -2,7 +2,7 @@
 
 The algorithm *TF-IDF*, or Term Frequency - Inverse Document Frequency, is a common method used to measure the relevance of a word in a set of documents. It is often utilized by search engines, machine learning models, and other tools to query and sort data.
 
-[[https://github.com/delyan-kirov/tf-idf/tree/master/content/tf_idf.gif]]
+[[https://github.com/delyan-kirov/tf-idf/blob/master/content/tf_idf.gif]]
 
 The idea is simple: we index a set of documents (document space) and record how often a term is encountered in that space and how often the term is encountered per document. Based on these statistics, we calculate the term frequency (TF), which measures how often a term is encountered per file relative to the number of terms in that file, and the inverse document frequency (IDF), which measures the number of documents relative to how often a term is encountered in them.
 
